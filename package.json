@@ -12,6 +12,7 @@
   "license": "ISC",
   "devDependencies": {
     "rollup": "^4.7.0",
+    "typescript": "^5.3.3",
     "vitest": "^1.0.2"
   }
 }
