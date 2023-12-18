@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { reactive } from "../src/reactivity";
 import { effect } from "../src/effect";
 
@@ -43,5 +43,31 @@ describe('effect', () => {
     const r = runner();
     expect(foo).toBe(12);
     expect(r).toBe('foo');
+  })
+
+  test('scheduler', () => {
+    let dummy;
+    let run: any;
+    const scheduler = vi.fn(() => {
+      run = runner;
+    });
+    const obj = reactive({ foo: 1 });
+    const runner = effect(
+      () => {
+        dummy = obj.foo;
+      },
+      { scheduler }
+    );
+    expect(scheduler).not.toHaveBeenCalled();
+    expect(dummy).toBe(1);
+    // should be called on first trigger
+    obj.foo++;
+    expect(scheduler).toHaveBeenCalledTimes(1);
+    // should not run yet
+    expect(dummy).toBe(1);
+    // manually run
+    run();
+    // should have run
+    expect(dummy).toBe(2);
   })
 })

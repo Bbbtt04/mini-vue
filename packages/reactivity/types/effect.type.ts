@@ -1,0 +1,3 @@
+interface EffectOptions {
+  scheduler?: any;
+}
