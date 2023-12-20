@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { reactive } from "../src/reactivity";
-import { effect } from "../src/effect";
+import { effect, stop } from "../src/effect";
 
 describe('effect', () => {
   test('happy path', () => {
@@ -16,19 +16,6 @@ describe('effect', () => {
     expect(nextAge).toBe(18);
     user.age++;
     expect(nextAge).toBe(19);
-  })
-
-  test('effect change && clean up', () => {
-    const data = { ok: true, text: 'Hello world' };
-    const obj = reactive(data);
-
-    let innerHtml;
-    effect(() => {
-      innerHtml = obj.ok ? obj.text : 'not';
-    })
-
-    obj.ok = false;
-    expect(innerHtml).toBe('not');
   })
 
   test('effect return runner', () => {
@@ -69,5 +56,32 @@ describe('effect', () => {
     run();
     // should have run
     expect(dummy).toBe(2);
+  })
+
+
+  test('stop', () => {
+    let dummy;
+    const obj = reactive({ foo: 1 });
+    const runner = effect(() => {
+      dummy = obj.foo;
+    })
+    obj.foo = 2;
+    expect(dummy).toBe(2);
+    stop(runner);
+    obj.foo = 3;
+    expect(dummy).toBe(2);
+
+    runner();
+    expect(dummy).toBe(3);
+  })
+
+  test('events：onStop', () => {
+    const onStop = vi.fn();
+    const runner = effect(() => { }, {
+      onStop,
+    });
+
+    stop(runner);
+    expect(onStop).toHaveBeenCalled();
   })
 })

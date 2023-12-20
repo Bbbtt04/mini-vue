@@ -1,3 +1,4 @@
+import { extend } from "../../shared";
 import { createDep } from "./dep";
 
 let activeEffect;
@@ -5,6 +6,9 @@ const targetMap = new WeakMap();
 
 class ReactiveEffect {
     private _fn: any;
+    deps = [];
+    active = true;
+    onStop?: () => void;
 
     constructor(fn: any, public scheduler?) {
         this._fn = fn;
@@ -14,14 +18,38 @@ class ReactiveEffect {
         activeEffect = this;
         return this._fn();
     }
+
+    stop() {
+        if (this.active) {
+            cleanupEffect(this);
+
+            if (this.onStop) {
+                this.onStop();
+            }
+
+            this.active = false;
+        }
+    }
+}
+
+function cleanupEffect(effect) {
+    effect.deps.forEach((dep) => {
+        dep.delete(effect);
+    })
+
+    effect.deps.length = 0;
 }
 
 export function effect(fn, options: EffectOptions = {}) {
     const _effect = new ReactiveEffect(fn, options.scheduler);
+    extend(_effect, options);
 
     _effect.run();
 
-    return _effect.run.bind(_effect);
+    const runnner: any = _effect.run.bind(_effect);
+    runnner.effect = _effect;
+
+    return runnner;
 }
 
 export function track(target, key) {
@@ -30,12 +58,15 @@ export function track(target, key) {
         targetMap.set(target, depsMap = new Map());
     }
 
-    let deps = depsMap.get(key);
-    if (!deps) {
-        depsMap.set(key, deps = createDep());
+    let dep = depsMap.get(key);
+    if (!dep) {
+        depsMap.set(key, dep = createDep());
     }
 
-    deps.add(activeEffect);
+    if (!activeEffect) return;
+
+    dep.add(activeEffect);
+    activeEffect.deps.push(dep);
 }
 
 export function trigger(target, key) {
@@ -52,4 +83,8 @@ export function trigger(target, key) {
             effect.run();
         }
     }
+}
+
+export function stop(runner: any) {
+    runner.effect.stop();
 }
