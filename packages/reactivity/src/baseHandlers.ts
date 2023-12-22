@@ -1,9 +1,10 @@
-import { isObject } from "../../shared/src";
-import { reactive } from "./reactivity";
 import { track, trigger } from "./effect";
 
 const get = createGetter();
 const set = createSetter();
+
+const readonlyGetter = createGetter(true);
+const readonlySetter = createSetter(true);
 
 function createGetter(isReadonly = false, shallow = false) {
     return function get(target, key, receiver) {
@@ -15,11 +16,17 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 }
 
-function createSetter() {
+function createSetter(isReadonly = false) {
     return function set(target, key, value, receiver) {
         const result = Reflect.set(target, key, value, receiver);
 
-        trigger(target, key);
+        if (!isReadonly) {
+            trigger(target, key);
+        }
+
+        if (isReadonly) {
+            console.warn(`key:${key} is readonly!!`);
+        }
 
         return result;
     }
@@ -28,4 +35,9 @@ function createSetter() {
 export const mutableHandlers = {
     get,
     set
+}
+
+export const readonlyHandlers = {
+    get: readonlyGetter,
+    set: readonlySetter
 }
