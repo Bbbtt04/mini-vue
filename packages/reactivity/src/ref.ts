@@ -42,6 +42,24 @@ export function unRef(ref) {
   return isRef(ref) ? ref.value : ref;
 }
 
+export function proxyRefs(objectWithRefs) {
+  return new Proxy(objectWithRefs, {
+    get(target, key, receiver) {
+      // 如果里面是一个 ref 类型的话，那么就返回 .value
+      // 如果不是的话，那么直接返回value 就可以了
+      return unRef(Reflect.get(target, key, receiver));
+    },
+    set(target, key, value, receiver) {
+      const oldValue = target[key];
+      if (isRef(oldValue) && !isRef(value)) {
+        return (target[key].value = value);
+      } else {
+        return Reflect.set(target, key, value, receiver);
+      }
+    },
+  })
+}
+
 function createRef(value) {
   const refImpl = new RefImpl(value);
 
